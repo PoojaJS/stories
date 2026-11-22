@@ -1,0 +1,189 @@
+import { RouteError } from "@/components/site/RouteError";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { ArrowRight } from "lucide-react";
+import character from "@/assets/theju-character.png.asset.json";
+import { Button } from "@/components/ui/button";
+import { PostCard } from "@/components/site/PostCard";
+import { listPosts } from "@/lib/blog.functions";
+import { allPhotos, slugify } from "@/lib/blog-types";
+import { useLoaderData } from "@tanstack/react-router";
+
+export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "Theju — Wanderer & Storyteller" },
+      {
+        name: "description",
+        content: "Travel stories, photos and memories from Theju: tea hills, mountain passes, old streets and slow afternoons.",
+      },
+      { property: "og:title", content: "Theju — Wanderer & Storyteller" },
+      {
+        property: "og:description",
+        content: "Travel stories, photos and memories from Theju: tea hills, mountain passes, old streets and slow afternoons.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
+  loader: async () => ({ posts: await listPosts() }),
+  component: Home,
+  errorComponent: RouteError,
+  notFoundComponent: () => <div className="px-6 pt-32 text-center">Nothing here yet.</div>,
+});
+
+function Home() {
+  const { posts } = Route.useLoaderData();
+  const { profile } = useLoaderData({ from: "__root__" });
+  const firstName = profile.display_name.split(/\s+/)[0] || "Theju";
+  const [lineA, lineB] = (profile.tagline || "Wanderer & Storyteller.")
+    .replace(/\.$/, "")
+    .split("&")
+    .map((s) => s.trim());
+  const latest = posts.slice(0, 3);
+  const strip = posts.flatMap((p) => allPhotos(p).map((src) => ({ src, post: p }))).slice(0, 8);
+  const year = new Date().getFullYear();
+
+  const ghost = [
+    `traveller: { name: "${firstName}", base: "${profile.home_base || "somewhere"}" },`,
+    ...posts.map(
+      (p) => `${slugify(p.location || p.title).replace(/-/g, "_")}: { date: "${p.happened_on}", mood: "${p.category}" },`,
+    ),
+    `packing: ["camera", "notebook", "sunglasses", "snacks"],`,
+    `next_stop: "wherever the road goes",`,
+  ];
+
+  return (
+    <>
+      {/* HERO */}
+      <section className="relative flex min-h-[100svh] flex-col items-center justify-center overflow-hidden px-4 pt-28">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 grid select-none grid-cols-1 gap-8 p-6 font-mono text-[13px] leading-[1.9] text-ghost-text md:grid-cols-3"
+        >
+          {[0, 1, 2].map((col) => (
+            <div key={col} className={col > 0 ? "hidden md:block" : ""}>
+              {Array.from({ length: 5 }).flatMap((_, rep) =>
+                ghost.map((line, i) => (
+                  <p key={`${rep}-${i}`} className="truncate" style={{ paddingLeft: `${((i + col + rep) % 3) * 14}px` }}>
+                    {line}
+                  </p>
+                )),
+              )}
+            </div>
+          ))}
+        </div>
+
+        <h1 className="text-mega relative z-0 text-center text-[clamp(3rem,10.5vw,9.5rem)] animate-rise">
+          <span className="block">{lineA}</span>
+          {lineB && <span className="block">&amp; {lineB}</span>}
+        </h1>
+
+        <img
+          src={character.url}
+          alt={`Ink drawing of ${firstName}`}
+          className="relative z-10 -mt-[clamp(2.5rem,7vw,6rem)] h-[min(58svh,560px)] w-auto animate-rise [animation-delay:200ms]"
+        />
+
+        <div className="absolute inset-x-0 bottom-8 z-20 mx-auto flex max-w-[1180px] items-end justify-between px-6 md:px-10">
+          <p className="text-4xl font-bold tracking-tight md:text-6xl">©{year}</p>
+          <p className="hidden font-mono text-sm font-medium md:block">{"{{ /TRAVEL & MEMORIES }}"}</p>
+        </div>
+      </section>
+
+      {/* INTRO */}
+      <section className="mx-auto grid max-w-[1180px] items-end gap-10 px-6 py-24 md:grid-cols-[1fr_1.1fr_1fr] md:px-10 md:py-32">
+        <div>
+          <h2 className="text-6xl font-bold leading-[0.95] tracking-tight md:text-7xl">
+            Hi, I'm
+            <br />
+            {firstName}.
+          </h2>
+          <p className="mt-6 text-2xl font-semibold leading-tight text-foreground/80">
+            {lineA}
+            <br />& {lineB}.
+          </p>
+          {profile.home_base && (
+            <div className="mt-8 border-t pt-5">
+              <p className="eyebrow">Based in</p>
+              <p className="mt-1 font-semibold">{profile.home_base}</p>
+            </div>
+          )}
+        </div>
+        {posts[0]?.cover_url && (
+          <div className="overflow-hidden rounded-3xl shadow-card">
+            <img
+              src={posts[0].cover_url}
+              alt={posts[0].title}
+              className="aspect-[4/5] w-full object-cover grayscale transition-[filter] duration-700 hover:grayscale-0"
+            />
+          </div>
+        )}
+        <div>
+          <p className="text-2xl leading-snug text-foreground/80 md:text-[1.7rem]">{profile.intro}</p>
+          <Button asChild size="pill" className="mt-8">
+            <Link to="/stories">
+              Read the stories <ArrowRight />
+            </Link>
+          </Button>
+        </div>
+      </section>
+
+      {/* LATEST */}
+      {latest.length > 0 && (
+        <section className="mx-auto max-w-[1180px] px-6 pb-24 md:px-10">
+          <div className="flex items-end justify-between gap-6 border-b pb-6">
+            <h2 className="text-5xl font-bold tracking-tight md:text-6xl">
+              Latest
+              <br />
+              stories.
+            </h2>
+            <Link to="/stories" className="inline-flex items-center gap-2 text-sm font-medium hover:underline">
+              All stories <ArrowRight className="size-4" />
+            </Link>
+          </div>
+          <div className="mt-10 grid gap-10 md:grid-cols-3">
+            {latest.map((p) => (
+              <PostCard key={p.id} post={p} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* PHOTO STRIP */}
+      {strip.length > 0 && (
+        <section className="pb-28">
+          <div className="mx-auto flex max-w-[1180px] items-end justify-between gap-6 px-6 md:px-10">
+            <h2 className="text-5xl font-bold tracking-tight md:text-6xl">
+              Places
+              <br />
+              I've been.
+            </h2>
+            <Link to="/gallery" className="inline-flex items-center gap-2 text-sm font-medium hover:underline">
+              Open the gallery <ArrowRight className="size-4" />
+            </Link>
+          </div>
+          <div className="mt-10 flex snap-x gap-5 overflow-x-auto px-6 pb-4 md:px-10">
+            {strip.map(({ src, post }, i) => (
+              <Link
+                key={`${src}-${i}`}
+                to="/stories/$slug"
+                params={{ slug: post.slug }}
+                className="group relative w-[72vw] shrink-0 snap-start overflow-hidden rounded-2xl sm:w-[340px]"
+              >
+                <img
+                  src={src}
+                  alt={post.location || post.title}
+                  loading="lazy"
+                  className="aspect-[3/4] w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                />
+                <span className="absolute bottom-3 left-3 rounded-full bg-ink px-3 py-1 font-mono text-[11px] text-ink-foreground">
+                  {post.location || post.title}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+    </>
+  );
+}
